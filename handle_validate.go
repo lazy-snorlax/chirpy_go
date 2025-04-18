@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
+	"strings"
 )
 
 func validateRequest(resp http.ResponseWriter, req *http.Request) {
@@ -10,7 +12,7 @@ func validateRequest(resp http.ResponseWriter, req *http.Request) {
 		Body string `json:"body"`
 	}
 	type returnVals struct {
-		Valid bool `json:"valid"`
+		CleanedBody string `json:"cleaned_body"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -28,6 +30,21 @@ func validateRequest(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	respondWithJSON(resp, http.StatusOK, returnVals{
-		Valid: true,
+		CleanedBody: checkProfane(params.Body),
 	})
+}
+
+func checkProfane(body string) string {
+	profane := []string{"kerfuffle", "sharbert", "fornax"}
+	clean := []string{}
+	toClean := strings.Split(body, " ")
+	for _, word := range toClean {
+		badWord := slices.Contains(profane, strings.Trim(strings.ToLower(word), " "))
+		if badWord {
+			clean = append(clean, "****")
+		} else {
+			clean = append(clean, word)
+		}
+	}
+	return strings.Join(clean, " ")
 }
