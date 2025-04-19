@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
+	platform       string
 }
 
 func main() {
@@ -31,9 +33,15 @@ func main() {
 	}
 	dbQueries := database.New(dbCon)
 
+	platform := os.Getenv("PLATFORM")
+	if platform == "" {
+		log.Fatal("PLATFORM must be set in environment file")
+	}
+
 	cfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
+		platform:       platform,
 	}
 
 	mux := http.NewServeMux()
@@ -43,6 +51,7 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", cfg.handleReset)
 	mux.HandleFunc("GET /admin/metrics/", cfg.handleMetrics)
 	mux.HandleFunc("POST /api/validate_chirp", validateRequest)
+	mux.HandleFunc("POST /api/users", cfg.createUser)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -67,10 +76,20 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func (cfg *apiConfig) handleReset(resp http.ResponseWriter, req *http.Request) {
+	if cfg.platform != "dev" {
+		resp.WriteHeader(http.StatusForbidden)
+		resp.Write([]byte("Reset is only allowed in dev environment."))
+		return
+	}
+	err := cfg.db.DeleteUsers(context.Background())
+	if err != nil {
+		respondWithError(resp, http.StatusInternalServerError, "Couldn't reset users", err)
+		return
+	}
 	cfg.fileserverHits.Store(0)
 	resp.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	resp.WriteHeader(200)
-	io.WriteString(resp, "Hits Reset")
+	resp.WriteHeader(http.StatusOK)
+	resp.Write([]byte("Hits reset to 0 and database reset to initial state"))
 }
 
 func (cfg *apiConfig) handleMetrics(resp http.ResponseWriter, req *http.Request) {
