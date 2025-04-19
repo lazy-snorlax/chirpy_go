@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 type Chirp struct {
@@ -11,6 +13,23 @@ type Chirp struct {
 	UpdatedAt string `json:"updated_at"`
 	Body      string `json:"body"`
 	UserId    string `json:"user_id"`
+}
+
+func (cfg *apiConfig) getChirp(resp http.ResponseWriter, req *http.Request) {
+	chirpID := req.PathValue("chirpID")
+	chirp, err := cfg.db.GetChirp(context.Background(), uuid.MustParse(chirpID))
+	if err != nil {
+		respondWithError(resp, http.StatusNotFound, "Couldn't get chirp", err)
+		return
+	}
+	dat := Chirp{
+		Id:        chirp.ID.String(),
+		CreatedAt: chirp.CreatedAt.String(),
+		UpdatedAt: chirp.UpdatedAt.String(),
+		Body:      chirp.Body,
+		UserId:    chirp.UserID.String(),
+	}
+	respondWithJSON(resp, http.StatusOK, dat)
 }
 
 func (cfg *apiConfig) getAllChirps(resp http.ResponseWriter, req *http.Request) {
