@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"io"
 	"log"
 	"main/internal/database"
@@ -68,24 +67,4 @@ func handleReadiness(resp http.ResponseWriter, req *http.Request) {
 	resp.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	resp.WriteHeader(200)
 	io.WriteString(resp, "OK")
-}
-
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileserverHits.Add(1)
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (cfg *apiConfig) handleMetrics(resp http.ResponseWriter, req *http.Request) {
-	resp.Header().Add("Content-Type", "text/html; charset=utf-8")
-	resp.WriteHeader(http.StatusOK)
-	resp.Write([]byte(fmt.Sprintf(`
-<html>
-  <body>
-    <h1>Welcome, Chirpy Admin</h1>
-    <p>Chirpy has been visited %d times!</p>
-  </body>
-</html>
-	`, cfg.fileserverHits.Load())))
 }
