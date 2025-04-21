@@ -16,6 +16,7 @@ type User struct {
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 	Email     string `json:"email"`
+	Token     string `json:"token"`
 }
 
 func (cfg *apiConfig) createUser(resp http.ResponseWriter, req *http.Request) {

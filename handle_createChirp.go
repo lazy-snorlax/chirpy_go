@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"main/internal/auth"
 	"main/internal/database"
 	"net/http"
 	"slices"
@@ -14,20 +15,23 @@ import (
 
 func (cfg *apiConfig) createChirp(resp http.ResponseWriter, req *http.Request) {
 	type parameters struct {
-		Body   string `json:"body"`
-		UserId string `json:"user_id"`
+		Body string `json:"body"`
 	}
-	type returnVals struct {
-		Id        string `json:"id"`
-		CreatedAt string `json:"created_at"`
-		UpdatedAt string `json:"updated_at"`
-		Body      string `json:"body"`
-		UserId    string `json:"user_id"`
+
+	token, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		respondWithError(resp, http.StatusUnauthorized, "Couldn't find JWT", err)
+		return
+	}
+	userID, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(resp, http.StatusUnauthorized, "Couldn't validate JWT", err)
+		return
 	}
 
 	decoder := json.NewDecoder(req.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(resp, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return
@@ -44,13 +48,13 @@ func (cfg *apiConfig) createChirp(resp http.ResponseWriter, req *http.Request) {
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 		Body:      checkProfane(params.Body),
-		UserID:    uuid.MustParse(params.UserId),
+		UserID:    userID,
 	})
 	if err != nil {
 		respondWithError(resp, http.StatusInternalServerError, "Couldn't create chirp", err)
 		return
 	}
-	respondWithJSON(resp, http.StatusCreated, returnVals{
+	respondWithJSON(resp, http.StatusCreated, Chirp{
 		Id:        chirp.ID.String(),
 		CreatedAt: chirp.CreatedAt.String(),
 		UpdatedAt: chirp.UpdatedAt.String(),

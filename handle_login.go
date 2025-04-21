@@ -5,12 +5,19 @@ import (
 	"encoding/json"
 	"main/internal/auth"
 	"net/http"
+	"time"
 )
 
 func (cfg *apiConfig) login(resp http.ResponseWriter, req *http.Request) {
 	type parameters struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
+	}
+	type response struct {
+		User
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -32,10 +39,28 @@ func (cfg *apiConfig) login(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondWithJSON(resp, http.StatusOK, User{
-		Id:        user.ID.String(),
-		CreatedAt: user.CreatedAt.String(),
-		UpdatedAt: user.UpdatedAt.String(),
-		Email:     params.Email,
+	expirationTime := time.Hour
+	if params.ExpiresInSeconds > 0 && params.ExpiresInSeconds < 3600 {
+		expirationTime = time.Duration(params.ExpiresInSeconds) * time.Second
+	}
+
+	accessToken, err := auth.MakeJWT(
+		user.ID,
+		cfg.jwtSecret,
+		expirationTime,
+	)
+	if err != nil {
+		respondWithError(resp, http.StatusInternalServerError, "Couldn't create access JWT", err)
+		return
+	}
+
+	respondWithJSON(resp, http.StatusOK, response{
+		User: User{
+			Id:        user.ID.String(),
+			CreatedAt: user.CreatedAt.String(),
+			UpdatedAt: user.UpdatedAt.String(),
+			Email:     user.Email,
+		},
+		Token: accessToken,
 	})
 }
