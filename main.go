@@ -52,6 +52,8 @@ func main() {
 	mux.Handle("/app/", cfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(fileRoot)))))
 	mux.HandleFunc("GET /api/healthz", handleReadiness)
 
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.userChirpyRed)
+
 	mux.HandleFunc("POST /api/login", cfg.login)
 	mux.HandleFunc("POST /api/refresh", cfg.handlerRefresh)
 	mux.HandleFunc("POST /api/revoke", cfg.handlerRevoke)

@@ -12,11 +12,12 @@ import (
 )
 
 type User struct {
-	Id        string `json:"id"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-	Email     string `json:"email"`
-	Token     string `json:"token"`
+	Id          string `json:"id"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+	Email       string `json:"email"`
+	IsChirpyRed bool   `json:"is_chirpy_red"`
+	Token       string `json:"token"`
 }
 
 func (cfg *apiConfig) createUser(resp http.ResponseWriter, req *http.Request) {
@@ -52,10 +53,11 @@ func (cfg *apiConfig) createUser(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	respondWithJSON(resp, http.StatusCreated, User{
-		Id:        user.ID.String(),
-		CreatedAt: user.CreatedAt.String(),
-		UpdatedAt: user.UpdatedAt.String(),
-		Email:     params.Email,
+		Id:          user.ID.String(),
+		CreatedAt:   user.CreatedAt.String(),
+		UpdatedAt:   user.UpdatedAt.String(),
+		Email:       params.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }
 
@@ -101,9 +103,10 @@ func (cfg *apiConfig) updateUser(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	respondWithJSON(resp, http.StatusOK, User{
-		Id:        user.ID.String(),
-		CreatedAt: user.CreatedAt.String(),
-		UpdatedAt: user.UpdatedAt.String(),
-		Email:     params.Email,
+		Id:          user.ID.String(),
+		CreatedAt:   user.CreatedAt.String(),
+		UpdatedAt:   user.UpdatedAt.String(),
+		Email:       params.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }
