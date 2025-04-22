@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"main/internal/auth"
+	"main/internal/database"
 	"net/http"
 	"time"
 )
 
 func (cfg *apiConfig) login(resp http.ResponseWriter, req *http.Request) {
 	type parameters struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type response struct {
 		User
@@ -39,18 +39,27 @@ func (cfg *apiConfig) login(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	expirationTime := time.Hour
-	if params.ExpiresInSeconds > 0 && params.ExpiresInSeconds < 3600 {
-		expirationTime = time.Duration(params.ExpiresInSeconds) * time.Second
-	}
-
 	accessToken, err := auth.MakeJWT(
 		user.ID,
 		cfg.jwtSecret,
-		expirationTime,
+		time.Hour,
 	)
 	if err != nil {
 		respondWithError(resp, http.StatusInternalServerError, "Couldn't create access JWT", err)
+		return
+	}
+
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(resp, http.StatusInternalServerError, "Couldn't create refresh token", err)
+	}
+	_, err = cfg.db.CreateRefreshToken(req.Context(), database.CreateRefreshTokenParams{
+		UserID:    user.ID,
+		Token:     refreshToken,
+		ExpiresAt: time.Now().UTC().Add(time.Hour * 24 * 60),
+	})
+	if err != nil {
+		respondWithError(resp, http.StatusInternalServerError, "Couldn't save refresh token", err)
 		return
 	}
 
@@ -61,6 +70,7 @@ func (cfg *apiConfig) login(resp http.ResponseWriter, req *http.Request) {
 			UpdatedAt: user.UpdatedAt.String(),
 			Email:     user.Email,
 		},
-		Token: accessToken,
+		Token:        accessToken,
+		RefreshToken: refreshToken,
 	})
 }
