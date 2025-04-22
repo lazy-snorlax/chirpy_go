@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"main/internal/auth"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -22,6 +23,17 @@ func (cfg *apiConfig) userChirpyRed(resp http.ResponseWriter, req *http.Request)
 	err := decoder.Decode(&params)
 	if err != nil {
 		respondWithError(resp, http.StatusInternalServerError, "Couldn't decode parameters", err)
+		return
+	}
+
+	apiKey, err := auth.GetAPIKey(req.Header)
+	if err != nil {
+		respondWithError(resp, http.StatusUnauthorized, "Unauthorized apiKey", err)
+		return
+	}
+
+	if apiKey != cfg.polkaSecret {
+		respondWithError(resp, http.StatusUnauthorized, "Unauthorized", err)
 		return
 	}
 
