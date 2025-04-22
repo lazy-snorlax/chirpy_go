@@ -14,11 +14,11 @@ import (
 )
 
 type Chirp struct {
-	Id        string `json:"id"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-	Body      string `json:"body"`
-	UserId    string `json:"user_id"`
+	Id        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserId    string    `json:"user_id"`
 }
 
 func (cfg *apiConfig) getChirp(resp http.ResponseWriter, req *http.Request) {
@@ -30,8 +30,8 @@ func (cfg *apiConfig) getChirp(resp http.ResponseWriter, req *http.Request) {
 	}
 	dat := Chirp{
 		Id:        chirp.ID.String(),
-		CreatedAt: chirp.CreatedAt.String(),
-		UpdatedAt: chirp.UpdatedAt.String(),
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
 		Body:      chirp.Body,
 		UserId:    chirp.UserID.String(),
 	}
@@ -40,6 +40,7 @@ func (cfg *apiConfig) getChirp(resp http.ResponseWriter, req *http.Request) {
 
 func (cfg *apiConfig) getAllChirps(resp http.ResponseWriter, req *http.Request) {
 	filter := req.URL.Query().Get("author_id")
+	sort := req.URL.Query().Get("sort")
 
 	var allChirps []database.Chirp
 	var err error
@@ -61,12 +62,18 @@ func (cfg *apiConfig) getAllChirps(resp http.ResponseWriter, req *http.Request) 
 	for _, chirp := range allChirps {
 		dat := Chirp{
 			Id:        chirp.ID.String(),
-			CreatedAt: chirp.CreatedAt.String(),
-			UpdatedAt: chirp.UpdatedAt.String(),
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
 			Body:      chirp.Body,
 			UserId:    chirp.UserID.String(),
 		}
 		chirps = append(chirps, dat)
+	}
+
+	if sort == "desc" {
+		slices.SortFunc(chirps, func(a, b Chirp) int {
+			return b.CreatedAt.Compare(a.CreatedAt)
+		})
 	}
 
 	respondWithJSON(resp, http.StatusOK, chirps)
@@ -115,8 +122,8 @@ func (cfg *apiConfig) createChirp(resp http.ResponseWriter, req *http.Request) {
 	}
 	respondWithJSON(resp, http.StatusCreated, Chirp{
 		Id:        chirp.ID.String(),
-		CreatedAt: chirp.CreatedAt.String(),
-		UpdatedAt: chirp.UpdatedAt.String(),
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
 		Body:      chirp.Body,
 		UserId:    chirp.UserID.String(),
 	})
