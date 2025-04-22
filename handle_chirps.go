@@ -124,3 +124,37 @@ func checkProfane(body string) string {
 	}
 	return strings.Join(clean, " ")
 }
+
+func (cfg *apiConfig) deleteChirp(resp http.ResponseWriter, req *http.Request) {
+	chirpID := req.PathValue("chirpID")
+	token, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		respondWithError(resp, http.StatusUnauthorized, "Couldn't find JWT", err)
+		return
+	}
+	userID, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(resp, http.StatusForbidden, "Couldn't validate JWT", err)
+		return
+	}
+
+	chirp, err := cfg.db.GetChirp(context.Background(), uuid.MustParse(chirpID))
+	if err != nil {
+		respondWithError(resp, http.StatusNotFound, "Couldn't get chirp", err)
+		return
+	}
+
+	if userID != chirp.UserID {
+		respondWithError(resp, http.StatusForbidden, "Unauthorized to delete chirp", err)
+		return
+	}
+
+	err = cfg.db.DeleteChirpById(req.Context(), uuid.MustParse(chirpID))
+	if err != nil {
+		respondWithError(resp, http.StatusNotFound, "Couldn't delete chirp", err)
+		return
+	}
+
+	resp.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	resp.WriteHeader(http.StatusNoContent)
+}

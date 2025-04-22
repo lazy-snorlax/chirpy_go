@@ -19,3 +19,6 @@ Where id = $1;
 -- name: GetAllChirps :many
 SELECT * FROM chirps
 ORDER BY created_at ASC;
+
+-- name: DeleteChirpById :exec
+DELETE FROM chirps where id = $1;
