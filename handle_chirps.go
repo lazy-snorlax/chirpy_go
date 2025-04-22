@@ -39,10 +39,22 @@ func (cfg *apiConfig) getChirp(resp http.ResponseWriter, req *http.Request) {
 }
 
 func (cfg *apiConfig) getAllChirps(resp http.ResponseWriter, req *http.Request) {
-	allChirps, err := cfg.db.GetAllChirps(context.Background())
-	if err != nil {
-		respondWithError(resp, http.StatusInternalServerError, "Couldn't get chirps", err)
-		return
+	filter := req.URL.Query().Get("author_id")
+
+	var allChirps []database.Chirp
+	var err error
+	if filter == "" {
+		allChirps, err = cfg.db.GetAllChirps(context.Background())
+		if err != nil {
+			respondWithError(resp, http.StatusInternalServerError, "Couldn't get chirps", err)
+			return
+		}
+	} else {
+		allChirps, err = cfg.db.GetAllChirpsByUserId(req.Context(), uuid.MustParse(filter))
+		if err != nil {
+			respondWithError(resp, http.StatusInternalServerError, "Couldn't get chirps", err)
+			return
+		}
 	}
 
 	var chirps []Chirp
